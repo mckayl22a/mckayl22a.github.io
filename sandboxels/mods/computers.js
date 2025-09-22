@@ -1,11 +1,6 @@
 // computers.js – Lua Computer Mod for Sandboxels
 
 runAfterLoad(function() {
-    // --- Create new category "Computers" ---
-    if (!Object.values(categories).includes("computers")) {
-        categories.computers = "Computers";
-    }
-
     // --- Lua Computer Element ---
     elements.luacomputer = {
         name: "Lua Computer",
