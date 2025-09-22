@@ -62,31 +62,45 @@ runAfterLoad(function() {
 
     // --- Screen Element ---
     elements.computer_screen = {
-        name: "Computer Screen",
-        color: "#222222",
-        behavior: behaviors.WALL,
-        category: "computers",
-        state: "solid",
-        desc: "Displays output from a connected Lua Computer.",
-        tick: function(pixel) {
-            // Look for a Lua Computer nearby
-            let neighbors = adjacentCoords(pixel.x, pixel.y);
-            for (let i = 0; i < neighbors.length; i++) {
-                let nx = neighbors[i][0];
-                let ny = neighbors[i][1];
-                if (!isEmpty(nx, ny, true)) {
-                    let nPix = pixelMap[nx][ny];
-                    if (nPix.element === "luacomputer") {
-                        // Show its output in console for now
-                        if (nPix.output && nPix.output !== pixel.lastOutput) {
-                            console.log("Screen Output:", nPix.output);
-                            pixel.lastOutput = nPix.output;
-                        }
-                    }
+    name: "Computer Screen",
+    color: "#222222",
+    behavior: behaviors.WALL,
+    category: "computers",
+    state: "solid",
+    desc: "Displays output from a connected Lua Computer.",
+
+    tick: function(pixel) {
+        let message = null;
+
+        // Look for Lua Computer neighbors
+        let neighbors = adjacentCoords(pixel.x, pixel.y);
+        for (let i = 0; i < neighbors.length; i++) {
+            let [nx, ny] = neighbors[i];
+            if (!isEmpty(nx, ny, true)) {
+                let nPix = pixelMap[nx][ny];
+                if (nPix.element === "luacomputer" && nPix.output) {
+                    message = nPix.output.toString();
+                    break;
                 }
             }
         }
-    };
+
+        // Default color (off)
+        pixel.color = "#222222";
+
+        // If output is found, display state by color
+        if (message) {
+            if (message.toLowerCase().includes("error")) {
+                pixel.color = "#FF0000"; // red for errors
+            } else if (!isNaN(Number(message))) {
+                pixel.color = "#00FF00"; // green for numbers
+            } else {
+                pixel.color = "#FFFF00"; // yellow for text
+            }
+        }
+    }
+};
+
 
     // --- Tool for editing code ---
     elements.luacomputer_editor = {
