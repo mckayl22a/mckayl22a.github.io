@@ -101,21 +101,28 @@ runAfterLoad(function() {
         }
     };
 
-    // --- Tool to Edit Lua Code ---
-    elements.luacomputer_editor = {
-        name: "Edit Lua Code",
-        color: "#00FF00",
-        tool: function(pixel) {
-            if (pixel.element === "luacomputer") {
-                const newCode = prompt("Enter Lua code:", pixel.code);
-                if (newCode !== null) {
-                    pixel.code = newCode;
-                    pixel.running = false; // re-run
-                }
-            }
-        },
-        category: "tools"
-    };
+    // --- Tool to Edit Lua Code (fixed) ---
+elements.luacomputer_editor = {
+    name: "Edit Lua Code",
+    color: "#00FF00",
+    tool: function(pixel) {
+        if (!pixel || pixel.element !== "luacomputer") return;
+
+        // Use a temporary "editing" flag to prevent double prompts
+        if (pixel.editing) return;
+        pixel.editing = true;
+
+        const newCode = prompt("Enter Lua code:", pixel.code);
+        if (newCode !== null) {
+            pixel.code = newCode;
+            pixel.running = false; // allow re-run
+        }
+
+        // Remove editing flag after prompt closes
+        pixel.editing = false;
+    },
+    category: "tools"
+};
 
     console.log("Lua Computer + Screen Spawner + Screen Cell loaded!");
 });
