@@ -61,29 +61,7 @@ runAfterLoad(function() {
     };
 
     // --- Screen Element ---
-    elements.computer_screen = {
-    name: "Computer Screen",
-    color: "#222222",
-    behavior: behaviors.WALL,
-    category: "computers",
-    state: "solid",
-    desc: "Displays output from a connected Lua Computer.",
-
-    tick: function(pixel) {
-        let message = null;
-
-        // Look for Lua Computer neighbors
-        let neighbors = adjacentCoords(pixel.x, pixel.y);
-        for (let i = 0; i < neighbors.length; i++) {
-            let [nx, ny] = neighbors[i];
-            if (!isEmpty(nx, ny, true)) {
-                let nPix = pixelMap[nx][ny];
-                if (nPix.element === "luacomputer" && nPix.output) {
-                    message = nPix.output.toString();
-                    break;
-                }
-            }
-        }
+    
 
         // Default color (off)
         pixel.color = "#222222";
