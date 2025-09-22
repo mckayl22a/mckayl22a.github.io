@@ -60,24 +60,6 @@ runAfterLoad(function() {
         }
     };
 
-    // --- Screen Element ---
-    
-
-        // Default color (off)
-        pixel.color = "#222222";
-
-        // If output is found, display state by color
-        if (message) {
-            if (message.toLowerCase().includes("error")) {
-                pixel.color = "#FF0000"; // red for errors
-            } else if (!isNaN(Number(message))) {
-                pixel.color = "#00FF00"; // green for numbers
-            } else {
-                pixel.color = "#FFFF00"; // yellow for text
-            }
-        }
-    }
-};
 
 
     // --- Tool for editing code ---
