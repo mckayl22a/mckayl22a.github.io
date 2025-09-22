@@ -1,6 +1,6 @@
-// computers.js – Lua Computer + Screen Mod for Sandboxels
-
+// computers.js – Lua Computer Mod for Sandboxels
 runAfterLoad(function() {
+
     // --- Lua Computer Element ---
     elements.luacomputer = {
         name: "Lua Computer",
@@ -15,7 +15,6 @@ runAfterLoad(function() {
             running: false
         },
         desc: "A programmable Lua computer. Use the Edit tool to change its code.",
-
         tick: function(pixel) {
             if (pixel.running) return;
 
@@ -64,10 +63,10 @@ runAfterLoad(function() {
         state: "solid",
         desc: "A single cell in a computer screen grid.",
         properties: {
-            value: 0 // for Lua computer output
+            value: 0 // can store pixel output for computer
         },
         tick: function(pixel) {
-            // Placeholder; Lua computers can modify pixel.value or pixel.color later
+            // Placeholder for Lua computer interaction
         }
     };
 
@@ -79,15 +78,15 @@ runAfterLoad(function() {
         category: "computers",
         state: "solid",
         desc: "Prompts for a grid size and creates a screen grid.",
-
-        tick: function(pixel) {
+        onAddPixel: function(pixel) {
             if (pixel.initialized) return;
 
-            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
+            pixel.initialized = true;
+
+            let sizeStr = prompt("Enter grid size (e.g., 6 for 6x6):", "6");
             let gridSize = parseInt(sizeStr);
             if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
 
-            // Create grid to the right
             for (let y = 0; y < gridSize; y++) {
                 for (let x = 0; x < gridSize; x++) {
                     let newX = pixel.x + 1 + x; // right of spawner
@@ -98,13 +97,11 @@ runAfterLoad(function() {
                 }
             }
 
-            // Remove spawner
-            pixel.element = "air";
-            pixel.initialized = true;
+            pixel.element = "air"; // remove spawner after spawning grid
         }
     };
 
-    // --- Lua Computer Editor Tool ---
+    // --- Tool to Edit Lua Code ---
     elements.luacomputer_editor = {
         name: "Edit Lua Code",
         color: "#00FF00",
@@ -113,12 +110,12 @@ runAfterLoad(function() {
                 const newCode = prompt("Enter Lua code:", pixel.code);
                 if (newCode !== null) {
                     pixel.code = newCode;
-                    pixel.running = false; // allow re-run
+                    pixel.running = false; // re-run
                 }
             }
         },
         category: "tools"
     };
 
-    console.log("Lua Computer + Screen Spawner + Screen Cell + Editor loaded!");
+    console.log("Lua Computer + Screen Spawner + Screen Cell loaded!");
 });
