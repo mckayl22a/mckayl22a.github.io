@@ -60,7 +60,58 @@ runAfterLoad(function() {
         }
     };
 
+        // --- Grid Spawner ---
+    elements.screen_spawner = {
+        name: "Screen Spawner",
+        color: "#4444FF",
+        behavior: behaviors.WALL,
+        category: "computers",
+        state: "solid",
+        desc: "Prompts for a grid size and creates a screen grid.",
+        tick: function(pixel) {
+            // Only run once
+            if (pixel.initialized) return;
 
+            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
+            let gridSize = parseInt(sizeStr);
+            if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
+
+            // Create grid to the right
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    let newX = pixel.x + 1 + x; // start to the right of spawner
+                    let newY = pixel.y + y;
+                    if (isEmpty(newX, newY, true)) {
+                        createPixel("screen_cell", newX, newY);
+                    }
+                }
+            }
+
+            // Remove the spawner
+            pixel.element = "air";
+            pixel.initialized = true;
+        }
+    };
+
+    // --- Screen Cell Element ---
+    elements.screen_cell = {
+        name: "Screen Cell",
+        color: "#222222",
+        behavior: behaviors.WALL,
+        category: "computers",
+        state: "solid",
+        desc: "A single cell in a computer screen grid.",
+        properties: {
+            value: 0 // can store pixel output for computer
+        },
+        tick: function(pixel) {
+            // For now, just a placeholder.
+            // Later, Lua computers can modify pixel.value or pixel.color
+        }
+    };
+
+    console.log("Screen Spawner + Screen Cell loaded!");
+});
 
     // --- Tool for editing code ---
     elements.luacomputer_editor = {
