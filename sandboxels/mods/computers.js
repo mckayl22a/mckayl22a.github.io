@@ -1,4 +1,4 @@
-// computers.js – Fixed Lua Computer Mod for Sandboxels
+// computers.js – Lua Computer Mod for Sandboxels
 
 runAfterLoad(function() {
 
@@ -16,6 +16,7 @@ runAfterLoad(function() {
             running: false
         },
         desc: "A programmable Lua computer. Use the Edit tool to change its code.",
+
         tick: function(pixel) {
             if (pixel.running) return;
 
@@ -64,61 +65,57 @@ runAfterLoad(function() {
         state: "solid",
         desc: "A single cell in a computer screen grid.",
         properties: {
-            value: 0
+            value: 0 // can store pixel output for computer
         },
         tick: function(pixel) {
-            // Placeholder for Lua interaction later
+            // Placeholder for computer interaction later
         }
     };
 
-    // --- Screen Spawner Element ---
-    elements.screen_spawner = {
-        name: "Screen Spawner",
-        color: "#4444FF",
-        behavior: behaviors.WALL,
-        category: "computers",
-        state: "solid",
-        desc: "Click to set grid size and create a screen grid.",
-        properties: {
-            initialized: false
-        },
-        tool: function(pixel) {
-            if (pixel.initialized) return;
-
-            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
-            let gridSize = parseInt(sizeStr);
-            if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
-
-            for (let y = 0; y < gridSize; y++) {
-                for (let x = 0; x < gridSize; x++) {
-                    let newX = pixel.x + 1 + x;
-                    let newY = pixel.y + y;
-                    if (isEmpty(newX, newY, true)) {
-                        createPixel("screen_cell", newX, newY);
-                    }
-                }
-            }
-
-            pixel.element = "air"; // remove spawner
-            pixel.initialized = true;
-        }
-    };
-
-    // --- Lua Computer Editor Tool ---
-    elements.luacomputer_editor = {
-        name: "Edit Lua Code",
-        color: "#00FF00",
-        tool: function(pixel) {
-            if (pixel.element !== "luacomputer") return;
-
-            const newCode = prompt("Enter Lua code:", pixel.code);
-            if (newCode !== null) {
-                pixel.code = newCode;
-                pixel.running = false; // allow code to re-run
-            }
-        },
-        category: "tools"
-    };
-
-    console.log("Lua Computer + Screen Spawner + Screen Cell loaded!");
+    console.log("Lua Computer + Screen Cell loaded!");
 });
+
+// --- Tool for Spawning Screen Grids ---
+elements.screen_spawner = {
+    name: "Screen Spawner",
+    color: "#4444FF",
+    tool: function(pixel) {
+        if (pixel.initialized) return;
+
+        let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
+        let gridSize = parseInt(sizeStr);
+        if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
+
+        for (let y = 0; y < gridSize; y++) {
+            for (let x = 0; x < gridSize; x++) {
+                let newX = pixel.x + 1 + x;
+                let newY = pixel.y + y;
+                if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
+            }
+        }
+
+        pixel.element = "air"; // remove the spawner
+        pixel.initialized = true;
+    },
+    category: "tools",
+    desc: "Prompts for a grid size and creates a screen grid."
+};
+
+// --- Tool for Editing Lua Code ---
+elements.luacomputer_editor = {
+    name: "Edit Lua Code",
+    color: "#00FF00",
+    tool: function(pixel) {
+        if (pixel.element !== "luacomputer") return;
+
+        const newCode = prompt("Enter Lua code:", pixel.code);
+        if (newCode !== null) {
+            pixel.code = newCode;
+            pixel.running = false; // allow code to run again
+        }
+    },
+    category: "tools",
+    desc: "Edit the Lua code of a Lua Computer."
+};
+
+console.log("Screen Spawner + Lua Editor tools loaded!");
