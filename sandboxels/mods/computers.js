@@ -1,5 +1,10 @@
 // computers.js – Lua Computer Mod for Sandboxels
 
+// Track mouse state globally
+let mouseIsDown = false;
+document.addEventListener("mousedown", () => mouseIsDown = true);
+document.addEventListener("mouseup",   () => mouseIsDown = false);
+
 runAfterLoad(function() {
 
     // --- Lua Computer Element ---
@@ -72,65 +77,65 @@ runAfterLoad(function() {
         }
     };
 
+    // --- Screen Spawner Tool ---
+    elements.screen_spawner = {
+        name: "Screen Spawner",
+        color: "#4444FF",
+        tool: function(pixel) {
+            if (!pixel) return;
+            if (!mouseIsDown) return; // only on click
 
-// --- Screen Spawner Tool ---
-elements.screen_spawner = {
-    name: "Screen Spawner",
-    color: "#4444FF",
-    tool: function(pixel) {
-        if (!pixel) return;
+            // Guard against multiple prompts per click
+            if (pixel._spawningNow) return;
+            pixel._spawningNow = true;
 
-        // Guard against multiple prompts per click
-        if (pixel._spawningNow) return;
-        pixel._spawningNow = true;
+            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
+            let gridSize = parseInt(sizeStr);
+            if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
 
-        let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
-        let gridSize = parseInt(sizeStr);
-        if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
-
-        for (let y = 0; y < gridSize; y++) {
-            for (let x = 0; x < gridSize; x++) {
-                let newX = pixel.x + 1 + x;
-                let newY = pixel.y + y;
-                if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    let newX = pixel.x + 1 + x;
+                    let newY = pixel.y + y;
+                    if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
+                }
             }
-        }
 
-        // Release lock
-        setTimeout(() => { pixel._spawningNow = false; }, 200);
-    },
-    category: "tools",
-    desc: "Click on a pixel to spawn a screen grid to its right."
-};
+            // Reset guard on mouseup
+            document.addEventListener("mouseup", () => {
+                pixel._spawningNow = false;
+            }, { once: true });
+        },
+        category: "tools",
+        desc: "Click on a pixel to spawn a screen grid to its right."
+    };
 
     // --- Lua Computer Editor Tool ---
-elements.luacomputer_editor = {
-    name: "Edit Lua Code",
-    color: "#00FF00",
-    tool: function(pixel) {
-        if (!pixel || pixel.element !== "luacomputer") return;
+    elements.luacomputer_editor = {
+        name: "Edit Lua Code",
+        color: "#00FF00",
+        tool: function(pixel) {
+            if (!pixel || pixel.element !== "luacomputer") return;
+            if (!mouseIsDown) return; // only on click
 
-        // Only act on actual click, not hover
-        if (!mouseDown) return;
+            // Guard so it runs once per click
+            if (pixel._editingNow) return;
+            pixel._editingNow = true;
 
-        // Guard so it runs once per click
-        if (pixel._editingNow) return;
-        pixel._editingNow = true;
+            const newCode = prompt("Enter Lua code:", pixel.code);
+            if (newCode !== null) {
+                pixel.code = newCode;
+                pixel.running = false;
+            }
 
-        const newCode = prompt("Enter Lua code:", pixel.code);
-        if (newCode !== null) {
-            pixel.code = newCode;
-            pixel.running = false;
-        }
-
-        // Reset guard when mouse is released
-        document.addEventListener("mouseup", () => {
-            pixel._editingNow = false;
-        }, { once: true });
-    },
-    category: "tools",
-    desc: "Edit the Lua code of a Lua Computer."
-};
+            // Reset guard when mouse is released
+            document.addEventListener("mouseup", () => {
+                pixel._editingNow = false;
+            }, { once: true });
+        },
+        category: "tools",
+        desc: "Edit the Lua code of a Lua Computer."
+    };
 
     console.log("Lua Computer + Screen + Tools loaded!");
 });
