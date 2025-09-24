@@ -65,57 +65,53 @@ runAfterLoad(function() {
         state: "solid",
         desc: "A single cell in a computer screen grid.",
         properties: {
-            value: 0 // can store pixel output for computer
+            value: 0
         },
         tick: function(pixel) {
-            // Placeholder for computer interaction later
+            // Placeholder for future computer/screen link
         }
     };
 
-    console.log("Lua Computer + Screen Cell loaded!");
-});
+    // --- Screen Spawner Tool ---
+    elements.screen_spawner = {
+        name: "Screen Spawner",
+        color: "#4444FF",
+        tool: function(pixel) {
+            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
+            let gridSize = parseInt(sizeStr);
+            if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
 
-// --- Tool for Spawning Screen Grids ---
-elements.screen_spawner = {
-    name: "Screen Spawner",
-    color: "#4444FF",
-    tool: function(pixel) {
-        if (pixel.initialized) return;
-
-        let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
-        let gridSize = parseInt(sizeStr);
-        if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
-
-        for (let y = 0; y < gridSize; y++) {
-            for (let x = 0; x < gridSize; x++) {
-                let newX = pixel.x + 1 + x;
-                let newY = pixel.y + y;
-                if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    let newX = pixel.x + 1 + x;
+                    let newY = pixel.y + y;
+                    if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
+                }
             }
-        }
+        },
+        category: "tools",
+        desc: "Click on a pixel to spawn a screen grid to its right."
+    };
 
-        pixel.element = "air"; // remove the spawner
-        pixel.initialized = true;
-    },
-    category: "tools",
-    desc: "Prompts for a grid size and creates a screen grid."
-};
+    // --- Lua Computer Editor Tool ---
+    elements.luacomputer_editor = {
+        name: "Edit Lua Code",
+        color: "#00FF00",
+        tool: function(pixel) {
+            if (pixel.element !== "luacomputer") return;
+            if (pixel.editing) return; // prevent reopening if double clicked
 
-// --- Tool for Editing Lua Code ---
-elements.luacomputer_editor = {
-    name: "Edit Lua Code",
-    color: "#00FF00",
-    tool: function(pixel) {
-        if (pixel.element !== "luacomputer") return;
+            pixel.editing = true;
+            const newCode = prompt("Enter Lua code:", pixel.code);
+            if (newCode !== null) {
+                pixel.code = newCode;
+                pixel.running = false;
+            }
+            pixel.editing = false;
+        },
+        category: "tools",
+        desc: "Edit the Lua code of a Lua Computer."
+    };
 
-        const newCode = prompt("Enter Lua code:", pixel.code);
-        if (newCode !== null) {
-            pixel.code = newCode;
-            pixel.running = false; // allow code to run again
-        }
-    },
-    category: "tools",
-    desc: "Edit the Lua code of a Lua Computer."
-};
-
-console.log("Screen Spawner + Lua Editor tools loaded!");
+    console.log("Lua Computer + Screen + Tools loaded!");
+});
