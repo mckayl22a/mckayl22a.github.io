@@ -4,9 +4,91 @@ let mouseIsDown = false;
 document.addEventListener("mousedown", () => mouseIsDown = true);
 document.addEventListener("mouseup",   () => mouseIsDown = false);
 
-let nextClusterId = 1;
-
 runAfterLoad(function() {
+    // --- Utility: Create editor GUI ---
+    function openLuaEditor(pixel) {
+        if (!pixel) return;
+
+        // Prevent multiple editors
+        if (document.getElementById("luaEditorOverlay")) return;
+
+        // Create overlay
+        const overlay = document.createElement("div");
+        overlay.id = "luaEditorOverlay";
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100%";
+        overlay.style.height = "100%";
+        overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.zIndex = "9999";
+
+        // Editor box
+        const box = document.createElement("div");
+        box.style.background = "#222";
+        box.style.padding = "20px";
+        box.style.borderRadius = "10px";
+        box.style.width = "600px";
+        box.style.maxWidth = "90%";
+        box.style.display = "flex";
+        box.style.flexDirection = "column";
+        box.style.gap = "10px";
+        overlay.appendChild(box);
+
+        // Title
+        const title = document.createElement("h2");
+        title.innerText = "Edit Lua Code";
+        title.style.color = "#fff";
+        title.style.margin = "0";
+        box.appendChild(title);
+
+        // Textarea
+        const textarea = document.createElement("textarea");
+        textarea.value = pixel.code || ""; // ✅ Empty if no code
+        textarea.style.width = "100%";
+        textarea.style.height = "300px";
+        textarea.style.fontFamily = "monospace";
+        textarea.style.fontSize = "14px";
+        textarea.style.background = "#111";
+        textarea.style.color = "#0f0";
+        textarea.style.border = "1px solid #555";
+        textarea.style.borderRadius = "5px";
+        textarea.style.padding = "10px";
+        box.appendChild(textarea);
+
+        // Buttons container
+        const buttons = document.createElement("div");
+        buttons.style.display = "flex";
+        buttons.style.justifyContent = "flex-end";
+        buttons.style.gap = "10px";
+        box.appendChild(buttons);
+
+        // Cancel button
+        const cancelBtn = document.createElement("button");
+        cancelBtn.innerText = "Cancel";
+        cancelBtn.style.padding = "5px 15px";
+        cancelBtn.onclick = () => {
+            overlay.remove();
+        };
+        buttons.appendChild(cancelBtn);
+
+        // Save button
+        const saveBtn = document.createElement("button");
+        saveBtn.innerText = "Save";
+        saveBtn.style.padding = "5px 15px";
+        saveBtn.onclick = () => {
+            pixel.code = textarea.value;
+            pixel.running = false; // reset execution
+            overlay.remove();
+        };
+        buttons.appendChild(saveBtn);
+
+        // Add overlay to body
+        document.body.appendChild(overlay);
+    }
 
     // --- Lua Computer Element ---
     elements.luacomputer = {
@@ -17,174 +99,65 @@ runAfterLoad(function() {
         state: "solid",
         conduct: 1,
         properties: {
-            code: "-- Lua code here\nprint(\"Hello!\")",
+            code: "", // ✅ starts empty
             output: "",
             running: false,
-            clusterId: null
+            networkId: null
         },
-        desc: "A programmable Lua computer. Connect with other computers or cables to form a cluster.",
+        desc: "A programmable Lua computer. Use the Edit tool to change its code.",
 
         tick: function(pixel) {
-            // Already in a cluster?
-            if (!pixel.clusterId) {
-                pixel.clusterId = nextClusterId++;
-            }
+            if (pixel.running) return;
+            if (!pixel.code || pixel.code.trim() === "") return; // ✅ Skip if no code
 
-            // Cluster discovery: merge with neighbors
-            let neighbors = [
-                pixelMap[pixel.x+1]?.[pixel.y],
-                pixelMap[pixel.x-1]?.[pixel.y],
-                pixelMap[pixel.x]?.[pixel.y+1],
-                pixelMap[pixel.x]?.[pixel.y-1],
-            ];
-            for (let n of neighbors) {
-                if (!n) continue;
-                if (n.element === "luacomputer" || n.element === "computer_cable") {
-                    if (!n.clusterId) {
-                        n.clusterId = pixel.clusterId;
-                    } else {
-                        pixel.clusterId = n.clusterId;
-                    }
-                }
-            }
-
-            // Run Lua once per cluster
-            if (!pixel.running) {
-                if (typeof fengari === "undefined") {
-                    pixel.output = "Fengari not loaded!";
-                    pixel.running = true;
-                    return;
-                }
-
-                try {
-                    const luaCode = pixel.code || "";
-                    const L = fengari.L,
-                          lua = fengari.lua,
-                          lauxlib = fengari.lauxlib,
-                          lualib = fengari.lualib,
-                          to_luastring = fengari.to_luastring;
-
-                    const luaState = lauxlib.luaL_newstate();
-                    lualib.luaL_openlibs(luaState);
-
-                    const status = lauxlib.luaL_loadstring(luaState, to_luastring(luaCode));
-                    if (status !== lua.LUA_OK) {
-                        pixel.output = "Lua syntax error: " + lua.lua_tojsstring(luaState, -1);
-                    } else {
-                        const callStatus = lua.lua_pcall(luaState, 0, lua.LUA_MULTRET, 0);
-                        if (callStatus !== lua.LUA_OK) {
-                            pixel.output = "Runtime error: " + lua.lua_tojsstring(luaState, -1);
-                        } else {
-                            pixel.output = lua.lua_tojsstring(luaState, -1) || "(no return)";
-                        }
-                    }
-                } catch (e) {
-                    pixel.output = "JS error: " + e.message;
-                }
-
+            if (typeof fengari === "undefined") {
+                pixel.output = "Fengari not loaded!";
                 pixel.running = true;
+                return;
             }
-        }
-    };
 
-    // --- Computer Cable Element ---
-    elements.computer_cable = {
-        name: "Computer Cable",
-        color: "#666666",
-        behavior: behaviors.WALL,
-        category: "computers",
-        state: "solid",
-        conduct: 1,
-        desc: "Links computers together into one cluster.",
-        properties: {
-            clusterId: null
-        },
-        tick: function(pixel) {
-            // Link with neighbors
-            let neighbors = [
-                pixelMap[pixel.x+1]?.[pixel.y],
-                pixelMap[pixel.x-1]?.[pixel.y],
-                pixelMap[pixel.x]?.[pixel.y+1],
-                pixelMap[pixel.x]?.[pixel.y-1],
-            ];
-            for (let n of neighbors) {
-                if (!n) continue;
-                if ((n.element === "luacomputer" || n.element === "computer_cable") && n.clusterId) {
-                    pixel.clusterId = n.clusterId;
+            try {
+                const luaCode = pixel.code || "";
+                const L = fengari.L,
+                      lua = fengari.lua,
+                      lauxlib = fengari.lauxlib,
+                      lualib = fengari.lualib,
+                      to_luastring = fengari.to_luastring;
+
+                const luaState = lauxlib.luaL_newstate();
+                lualib.luaL_openlibs(luaState);
+
+                const status = lauxlib.luaL_loadstring(luaState, to_luastring(luaCode));
+                if (status !== lua.LUA_OK) {
+                    pixel.output = "Lua syntax error: " + lua.lua_tojsstring(luaState, -1);
+                } else {
+                    const callStatus = lua.lua_pcall(luaState, 0, lua.LUA_MULTRET, 0);
+                    if (callStatus !== lua.LUA_OK) {
+                        pixel.output = "Runtime error: " + lua.lua_tojsstring(luaState, -1);
+                    } else {
+                        pixel.output = lua.lua_tojsstring(luaState, -1) || "(no return)";
+                    }
                 }
+            } catch (e) {
+                pixel.output = "JS error: " + e.message;
             }
-            if (!pixel.clusterId) pixel.clusterId = nextClusterId++;
+
+            pixel.running = true;
         }
     };
 
-    // --- Screen Cell Element ---
-    elements.screen_cell = {
-        name: "Screen Cell",
-        color: "#222222",
-        behavior: behaviors.WALL,
-        category: "computers",
-        state: "solid",
-        desc: "A single cell in a computer screen grid.",
-        properties: {
-            value: 0
-        },
-        tick: function(pixel) {
-            // Placeholder
-        }
-    };
-
-    // --- Screen Spawner Tool ---
-    elements.screen_spawner = {
-        name: "Screen Spawner",
-        color: "#4444FF",
-        tool: function(pixel) {
-            if (!pixel || !mouseIsDown) return;
-            if (pixel._spawningNow) return;
-            pixel._spawningNow = true;
-
-            let sizeStr = prompt("Enter grid size (e.g. 6 for 6x6):", "6");
-            let gridSize = parseInt(sizeStr);
-            if (isNaN(gridSize) || gridSize < 1) gridSize = 6;
-
-            for (let y = 0; y < gridSize; y++) {
-                for (let x = 0; x < gridSize; x++) {
-                    let newX = pixel.x + 1 + x;
-                    let newY = pixel.y + y;
-                    if (isEmpty(newX, newY, true)) createPixel("screen_cell", newX, newY);
-                }
-            }
-
-            document.addEventListener("mouseup", () => {
-                pixel._spawningNow = false;
-            }, { once: true });
-        },
-        category: "tools",
-        desc: "Click to spawn a screen grid."
-    };
-
-    // --- Lua Computer Editor Tool ---
+    // --- Lua Computer Editor Tool (GUI) ---
     elements.luacomputer_editor = {
         name: "Edit Lua Code",
         color: "#00FF00",
         tool: function(pixel) {
             if (!pixel || pixel.element !== "luacomputer") return;
-            if (!mouseIsDown) return;
-            if (pixel._editingNow) return;
-            pixel._editingNow = true;
-
-            const newCode = prompt("Enter Lua code:", pixel.code);
-            if (newCode !== null) {
-                pixel.code = newCode;
-                pixel.running = false;
-            }
-
-            document.addEventListener("mouseup", () => {
-                pixel._editingNow = false;
-            }, { once: true });
+            if (!mouseIsDown) return; // ✅ only on click, not hover
+            openLuaEditor(pixel);
         },
         category: "tools",
-        desc: "Edit the Lua code of a Lua Computer."
+        desc: "Open a GUI editor for Lua Computers."
     };
 
-    console.log("Lua Computers + Cables + Tools loaded!");
+    console.log("Lua Computer with GUI editor loaded!");
 });
