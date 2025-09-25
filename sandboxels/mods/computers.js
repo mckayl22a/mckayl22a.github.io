@@ -5,92 +5,40 @@ document.addEventListener("mousedown", () => mouseIsDown = true);
 document.addEventListener("mouseup",   () => mouseIsDown = false);
 
 runAfterLoad(function() {
-    // --- Utility: Create editor GUI ---
-    function openLuaEditor(pixel) {
-        if (!pixel) return;
-
-        // Prevent multiple editors
-        if (document.getElementById("luaEditorOverlay")) return;
-
-        // Create overlay
-        const overlay = document.createElement("div");
-        overlay.id = "luaEditorOverlay";
-        overlay.style.position = "fixed";
-        overlay.style.top = "0";
-        overlay.style.left = "0";
-        overlay.style.width = "100%";
-        overlay.style.height = "100%";
-        overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
-        overlay.style.display = "flex";
-        overlay.style.alignItems = "center";
-        overlay.style.justifyContent = "center";
-        overlay.style.zIndex = "9999";
-
-        // Editor box
-        const box = document.createElement("div");
-        box.style.background = "#222";
-        box.style.padding = "20px";
-        box.style.borderRadius = "10px";
-        box.style.width = "600px";
-        box.style.maxWidth = "90%";
-        box.style.display = "flex";
-        box.style.flexDirection = "column";
-        box.style.gap = "10px";
-        overlay.appendChild(box);
-
-        // Title
-        const title = document.createElement("h2");
-        title.innerText = "Edit Lua Code";
-        title.style.color = "#fff";
-        title.style.margin = "0";
-        box.appendChild(title);
-
-        // Textarea
-        const textarea = document.createElement("textarea");
-        textarea.value = pixel.code || ""; // ✅ Empty if no code
-        textarea.style.width = "100%";
-        textarea.style.height = "300px";
-        textarea.style.fontFamily = "monospace";
-        textarea.style.fontSize = "14px";
-        textarea.style.background = "#111";
-        textarea.style.color = "#0f0";
-        textarea.style.border = "1px solid #555";
-        textarea.style.borderRadius = "5px";
-        textarea.style.padding = "10px";
-        box.appendChild(textarea);
-
-        // Buttons container
-        const buttons = document.createElement("div");
-        buttons.style.display = "flex";
-        buttons.style.justifyContent = "flex-end";
-        buttons.style.gap = "10px";
-        box.appendChild(buttons);
-
-        // Cancel button
-        const cancelBtn = document.createElement("button");
-        cancelBtn.innerText = "Cancel";
-        cancelBtn.style.padding = "5px 15px";
-        cancelBtn.onclick = () => {
-            overlay.remove();
-        };
-        buttons.appendChild(cancelBtn);
-
-        // Save button
-        const saveBtn = document.createElement("button");
-        saveBtn.innerText = "Save";
-        saveBtn.style.padding = "5px 15px";
-        saveBtn.onclick = () => {
-            pixel.code = textarea.value;
-            pixel.running = false; // reset execution
-            overlay.remove();
-        };
-        buttons.appendChild(saveBtn);
-
-        // Add overlay to body
-        document.body.appendChild(overlay);
+    // --- Utility: Unique ID generator ---
+    function generateId() {
+        return "id_" + Math.floor(Math.random() * 1e9).toString(36);
     }
 
-    // --- Lua Computer Element ---
+    // --- Networking helper ---
+    function connectNetworks(pixel, neighbors) {
+        let foundId = pixel.networkId;
+        for (let n of neighbors) {
+            if (n && (n.element === "luacomputer" || n.element === "screen_cell") && n.networkId) {
+                foundId = n.networkId;
+                break;
+            }
+        }
+        if (!foundId) {
+            foundId = generateId();
+        }
+
+        // Assign ID to this pixel if it's a computer/screen
+        if (pixel.element === "luacomputer" || pixel.element === "screen_cell") {
+            pixel.networkId = foundId;
+            if (!pixel.displayName) pixel.displayName = foundId; // fallback name
+        }
+
+        // Propagate to neighbors
+        for (let n of neighbors) {
+            if (n && (n.element === "luacomputer" || n.element === "screen_cell")) {
+                n.networkId = foundId;
+                if (!n.displayName) n.displayName = foundId;
+            }
+        }
+    }
+
+    // --- Lua Computer ---
     elements.luacomputer = {
         name: "Lua Computer",
         color: "#3333BB",
@@ -99,16 +47,26 @@ runAfterLoad(function() {
         state: "solid",
         conduct: 1,
         properties: {
-            code: "", // ✅ starts empty
+            code: "",
             output: "",
             running: false,
-            networkId: null
+            networkId: null,
+            displayName: null
         },
-        desc: "A programmable Lua computer. Use the Edit tool to change its code.",
+        desc: "A programmable Lua computer. Right-click with the editor tool to change its code.",
 
         tick: function(pixel) {
+            // Network linking
+            let neighbors = [
+                pixelMap[pixel.x]?.[pixel.y-1],
+                pixelMap[pixel.x]?.[pixel.y+1],
+                pixelMap[pixel.x-1]?.[pixel.y],
+                pixelMap[pixel.x+1]?.[pixel.y]
+            ];
+            connectNetworks(pixel, neighbors);
+
             if (pixel.running) return;
-            if (!pixel.code || pixel.code.trim() === "") return; // ✅ Skip if no code
+            if (!pixel.code || pixel.code.trim() === "") return;
 
             if (typeof fengari === "undefined") {
                 pixel.output = "Fengari not loaded!";
@@ -146,18 +104,85 @@ runAfterLoad(function() {
         }
     };
 
-    // --- Lua Computer Editor Tool (GUI) ---
+    // --- Screen Cell ---
+    elements.screen_cell = {
+        name: "Screen Cell",
+        color: "#222222",
+        behavior: behaviors.WALL,
+        category: "computers",
+        state: "solid",
+        properties: {
+            value: 0,
+            networkId: null,
+            displayName: null
+        },
+        desc: "A single cell in a computer screen grid. Joins a computer network when connected.",
+        tick: function(pixel) {
+            let neighbors = [
+                pixelMap[pixel.x]?.[pixel.y-1],
+                pixelMap[pixel.x]?.[pixel.y+1],
+                pixelMap[pixel.x-1]?.[pixel.y],
+                pixelMap[pixel.x+1]?.[pixel.y]
+            ];
+            connectNetworks(pixel, neighbors);
+        }
+    };
+
+    // --- Computer Cable ---
+    elements.computer_cable = {
+        name: "Computer Cable",
+        color: "#666666",
+        behavior: behaviors.WALL,
+        category: "computers",
+        state: "solid",
+        desc: "Connects computers and screens into one network.",
+        tick: function(pixel) {
+            let neighbors = [
+                pixelMap[pixel.x]?.[pixel.y-1],
+                pixelMap[pixel.x]?.[pixel.y+1],
+                pixelMap[pixel.x-1]?.[pixel.y],
+                pixelMap[pixel.x+1]?.[pixel.y]
+            ];
+            connectNetworks(pixel, neighbors);
+        }
+    };
+
+    // --- Lua Computer Editor Tool ---
     elements.luacomputer_editor = {
         name: "Edit Lua Code",
         color: "#00FF00",
         tool: function(pixel) {
             if (!pixel || pixel.element !== "luacomputer") return;
-            if (!mouseIsDown) return; // ✅ only on click, not hover
+            if (!mouseIsDown) return;
             openLuaEditor(pixel);
         },
         category: "tools",
         desc: "Open a GUI editor for Lua Computers."
     };
 
-    console.log("Lua Computer with GUI editor loaded!");
+    // --- Rename Network Tool ---
+    elements.network_renamer = {
+        name: "Rename Network ID",
+        color: "#FFFF00",
+        tool: function(pixel) {
+            if (!pixel || !(pixel.element === "luacomputer" || pixel.element === "screen_cell")) return;
+            if (!mouseIsDown) return;
+
+            let newName = prompt("Enter new name for network:", pixel.displayName || pixel.networkId);
+            if (newName && newName.trim() !== "") {
+                let targetId = pixel.networkId;
+                for (let row of pixelMap) {
+                    for (let p of row) {
+                        if (p && p.networkId === targetId && (p.element === "luacomputer" || p.element === "screen_cell")) {
+                            p.displayName = newName;
+                        }
+                    }
+                }
+            }
+        },
+        category: "tools",
+        desc: "Rename the ID of a network to a custom name."
+    };
+
+    console.log("Lua Computer + Cables + Network IDs + Renamer loaded!");
 });
