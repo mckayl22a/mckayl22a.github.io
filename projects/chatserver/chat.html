@@ -125,9 +125,21 @@ function renderServers() {
 
 function connectToServer(name, configJSON, channel) {
   try {
-    const config = JSON.parse(configJSON);
+    // Clean input (handles pasted JS config)
+    let configStr = configJSON.trim()
+      .replace(/^const\s+\w+\s*=\s*/, "")   // remove 'const firebaseConfig ='
+      .replace(/^var\s+\w+\s*=\s*/, "")     // remove 'var something ='
+      .replace(/^let\s+\w+\s*=\s*/, "")     // remove 'let something ='
+      .replace(/;$/, "")                    // remove trailing semicolon
+      .replace(/(\w+):/g, '"$1":');         // ensure property keys are quoted
+
+    // Try parsing JSON safely
+    const config = JSON.parse(configStr);
+
+    // Initialize Firebase app (unique per server)
     const app = initializeApp(config, name);
     const db = getDatabase(app);
+
     currentApp = app;
     currentServer = name;
     currentChannel = channel;
@@ -153,10 +165,13 @@ function connectToServer(name, configJSON, channel) {
       push(ref(db, `messages/${channel}`), { user: username, text, timestamp: Date.now() });
       document.getElementById("chat-input").value = "";
     };
+
   } catch (e) {
-    alert("Invalid Firebase configuration");
+    console.error(e);
+    alert("Invalid Firebase configuration. Please paste only the object or remove 'const firebaseConfig =' from it.");
   }
 }
+
 
 // CREATE SERVER
 const createModal = document.getElementById("create-server-modal");
