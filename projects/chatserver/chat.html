@@ -5,121 +5,202 @@
 <title>GurtChat</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-#chat-wrapper{display:flex;height:100vh;font-family:sans-serif;}
-#sidebar{width:220px;background:#f3f4f6;padding:10px;display:flex;flex-direction:column;}
-.channel-list{flex:1;overflow-y:auto;margin-bottom:10px;}
-.channel{padding:5px 10px;border-radius:5px;cursor:pointer;margin-bottom:3px;}
+body{margin:0;font-family:sans-serif;background:#f9fafb;}
+#chat-wrapper{display:flex;height:100vh;}
+#sidebar{width:260px;background:#f3f4f6;display:flex;flex-direction:column;padding:10px;}
+#server-controls{margin-bottom:10px;}
+#server-controls button{width:100%;padding:8px;margin-bottom:6px;border:none;border-radius:5px;background:#3b82f6;color:white;cursor:pointer;}
+#server-controls button:hover{background:#2563eb;}
+.server-entry{margin-top:5px;}
+.server-header{cursor:pointer;font-weight:bold;padding:5px;background:#e2e8f0;border-radius:4px;display:flex;justify-content:space-between;align-items:center;}
+.channel{padding:3px 15px;cursor:pointer;}
+.channel:hover{background:#dbeafe;}
 .channel.active{background:#3b82f6;color:white;}
 #chat-area{flex:1;display:flex;flex-direction:column;background:white;}
 #chat-header{padding:10px;border-bottom:1px solid #ddd;font-weight:bold;}
 #messages{flex:1;padding:10px;overflow-y:auto;}
-#chat-input-area{display:flex;border-top:1px solid #ddd;padding:10px;}
+#chat-input-area{display:flex;padding:10px;border-top:1px solid #ddd;}
 #chat-input{flex:1;padding:12px;border-radius:5px;border:1px solid #ccc;font-size:16px;}
 #send-btn{padding:6px 12px;margin-left:5px;border:none;border-radius:5px;background:#3b82f6;color:white;cursor:pointer;}
 #send-btn:hover{background:#2563eb;}
 .msg-bubble{padding:6px 10px;border-radius:8px;margin-bottom:5px;display:inline-block;}
-.msg-user{background:#3b82f6;color:white;align-self:flex-end;}
-.msg-other{background:#e5e7eb;color:#111;align-self:flex-start;}
+.msg-user{background:#3b82f6;color:white;}
+.msg-other{background:#e5e7eb;color:#111;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;}
+.modal-content{background:white;padding:20px;border-radius:8px;width:400px;max-width:90%;}
+.modal-content input, .modal-content textarea{width:100%;margin-bottom:10px;padding:8px;border:1px solid #ccc;border-radius:4px;}
+.modal-content button{padding:8px 12px;border:none;border-radius:4px;background:#3b82f6;color:white;cursor:pointer;}
+.modal-content button:hover{background:#2563eb;}
 </style>
 </head>
 <body>
 <div id="chat-wrapper">
   <div id="sidebar">
-    <h2>GurtChat</h2>
-    <div class="channel-list">
-      <div class="channel active" data-channel="general"># general</div>
-      <div class="channel" data-channel="random"># random</div>
-      <div class="channel" data-channel="help"># help</div>
+    <div id="server-controls">
+      <button id="create-server-btn">Create Server</button>
+      <button id="join-server-btn">Join Server</button>
     </div>
+    <div id="server-list"></div>
     <button id="user-btn">User Page</button>
   </div>
   <div id="chat-area">
-    <div id="chat-header"># general</div>
+    <div id="chat-header">No server selected</div>
     <div id="messages"></div>
     <div id="chat-input-area">
-      <input id="chat-input" placeholder="Message #general"/>
-      <button id="send-btn">Send</button>
+      <input id="chat-input" placeholder="Select a server and channel..." disabled/>
+      <button id="send-btn" disabled>Send</button>
     </div>
+  </div>
+</div>
+
+<!-- Create Server Modal -->
+<div class="modal" id="create-server-modal">
+  <div class="modal-content">
+    <h3>Create Server</h3>
+    <input id="server-name" placeholder="Server name"/>
+    <textarea id="firebase-config" placeholder="Paste your Firebase config JSON here"></textarea>
+    <input id="server-channels" placeholder="Channels (comma separated)"/>
+    <button id="save-server">Save Server</button>
+    <p id="join-key" style="font-size:12px;word-break:break-all;"></p>
+  </div>
+</div>
+
+<!-- Join Server Modal -->
+<div class="modal" id="join-server-modal">
+  <div class="modal-content">
+    <h3>Join Server</h3>
+    <input id="join-key-input" placeholder="Paste join key here"/>
+    <button id="join-key-submit">Join</button>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
-const firebaseConfig = { apiKey:"AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
-authDomain:"gurtchat-237b3.firebaseapp.com",
-databaseURL:"https://gurtchat-237b3-default-rtdb.firebaseio.com",
-projectId:"gurtchat-237b3",
-storageBucket:"gurtchat-237b3.firebasestorage.app",
-messagingSenderId:"762205720734",
-appId:"1:762205720734:web:e96c0888b31155380aeb8f" };
+let servers = JSON.parse(localStorage.getItem("gurtchat_servers") || "{}");
+let currentServer = null;
+let currentChannel = null;
+let currentApp = null;
+let username = localStorage.getItem("gurtchat_username") || "User";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+function saveServers() { localStorage.setItem("gurtchat_servers", JSON.stringify(servers)); }
+function renderServers() {
+  const list = document.getElementById("server-list");
+  list.innerHTML = "";
+  Object.entries(servers).forEach(([name, data]) => {
+    const entry = document.createElement("div");
+    entry.classList.add("server-entry");
 
-let username="",currentChannel="general",authInitialized=false;
+    const header = document.createElement("div");
+    header.classList.add("server-header");
+    header.innerHTML = `<span>${name}</span><span>►</span>`;
+    entry.appendChild(header);
 
-onAuthStateChanged(auth,(user)=>{
-  if(!authInitialized){
-    authInitialized=true;
-    if(!user){
-      localStorage.removeItem("gurtchat_username");
-      window.location.href="index.html";
-      return;
-    }
-    username=localStorage.getItem("gurtchat_username")||user.email.split("@")[0];
-    initChatUI();
-  }
-});
-
-function initChatUI(){
-  const messagesDiv=document.getElementById("messages");
-  const input=document.getElementById("chat-input");
-
-  const badWords=["badword1","badword2"];
-  function filterMessage(text){badWords.forEach(w=>{const re=new RegExp("\\b"+w+"\\b","gi");text=text.replace(re,"****");});return text;}
-
-  function loadMessages(channel){
-    messagesDiv.innerHTML="";
-    const messagesRef=ref(db,`messages/${channel}`);
-    onChildAdded(messagesRef,(snapshot)=>{
-      const msg=snapshot.val();
-      const bubble=document.createElement("div");
-      bubble.classList.add("msg-bubble",msg.user===username?"msg-user":"msg-other");
-      bubble.textContent=`${msg.user}: ${msg.text}`;
-      messagesDiv.appendChild(bubble);
-      messagesDiv.scrollTop=messagesDiv.scrollHeight;
+    const channelsDiv = document.createElement("div");
+    channelsDiv.style.display = "none";
+    data.channels.forEach(ch => {
+      const c = document.createElement("div");
+      c.classList.add("channel");
+      c.textContent = ch;
+      c.addEventListener("click", () => {
+        document.querySelectorAll(".channel").forEach(cc => cc.classList.remove("active"));
+        c.classList.add("active");
+        connectToServer(name, data.config, ch);
+      });
+      channelsDiv.appendChild(c);
     });
-  }
+    entry.appendChild(channelsDiv);
 
-  loadMessages(currentChannel);
-
-  function sendMessage(){
-    const text=filterMessage(input.value.trim());
-    if(!text) return;
-    push(ref(db,`messages/${currentChannel}`),{user:username,text:text,timestamp:Date.now()});
-    input.value="";
-  }
-
-  document.getElementById("send-btn").addEventListener("click",sendMessage);
-  input.addEventListener("keypress",(e)=>{if(e.key==="Enter") sendMessage();});
-
-  document.querySelectorAll(".channel").forEach(el=>{
-    el.addEventListener("click",()=>{
-      document.querySelectorAll(".channel").forEach(c=>c.classList.remove("active"));
-      el.classList.add("active");
-      currentChannel=el.dataset.channel;
-      document.getElementById("chat-header").textContent=`# ${currentChannel}`;
-      input.placeholder=`Message #${currentChannel}`;
-      loadMessages(currentChannel);
+    header.addEventListener("click", () => {
+      const open = channelsDiv.style.display === "block";
+      channelsDiv.style.display = open ? "none" : "block";
+      header.querySelector("span:last-child").textContent = open ? "►" : "▼";
     });
+
+    list.appendChild(entry);
   });
-
-  document.getElementById("user-btn").addEventListener("click",()=>window.location.href="user.html");
 }
+
+function connectToServer(name, configJSON, channel) {
+  try {
+    const config = JSON.parse(configJSON);
+    const app = initializeApp(config, name);
+    const db = getDatabase(app);
+    currentApp = app;
+    currentServer = name;
+    currentChannel = channel;
+    document.getElementById("chat-header").textContent = `${name} - #${channel}`;
+    document.getElementById("chat-input").disabled = false;
+    document.getElementById("send-btn").disabled = false;
+
+    const messagesDiv = document.getElementById("messages");
+    messagesDiv.innerHTML = "";
+    const messagesRef = ref(db, `messages/${channel}`);
+    onChildAdded(messagesRef, (snapshot) => {
+      const msg = snapshot.val();
+      const bubble = document.createElement("div");
+      bubble.classList.add("msg-bubble", msg.user === username ? "msg-user" : "msg-other");
+      bubble.textContent = `${msg.user}: ${msg.text}`;
+      messagesDiv.appendChild(bubble);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    document.getElementById("send-btn").onclick = () => {
+      const text = document.getElementById("chat-input").value.trim();
+      if (!text) return;
+      push(ref(db, `messages/${channel}`), { user: username, text, timestamp: Date.now() });
+      document.getElementById("chat-input").value = "";
+    };
+  } catch (e) {
+    alert("Invalid Firebase configuration");
+  }
+}
+
+// CREATE SERVER
+const createModal = document.getElementById("create-server-modal");
+document.getElementById("create-server-btn").onclick = () => createModal.style.display = "flex";
+document.getElementById("save-server").onclick = () => {
+  const name = document.getElementById("server-name").value.trim();
+  const config = document.getElementById("firebase-config").value.trim();
+  const chans = document.getElementById("server-channels").value.split(",").map(c => c.trim()).filter(c => c);
+  if (!name || !config || chans.length === 0) return alert("Fill all fields");
+  servers[name] = { config, channels: chans };
+  saveServers();
+  renderServers();
+  const joinKey = btoa(`${name}|${config}`);
+  document.getElementById("join-key").textContent = "Join Key (share to others): " + joinKey;
+};
+
+// JOIN SERVER
+const joinModal = document.getElementById("join-server-modal");
+document.getElementById("join-server-btn").onclick = () => joinModal.style.display = "flex";
+document.getElementById("join-key-submit").onclick = () => {
+  const key = document.getElementById("join-key-input").value.trim();
+  if (!key) return;
+  try {
+    const decoded = atob(key);
+    const [name, config] = decoded.split("|");
+    servers[name] = { config, channels: ["general"] };
+    saveServers();
+    renderServers();
+    joinModal.style.display = "none";
+  } catch {
+    alert("Invalid join key");
+  }
+};
+
+// close modals on outside click
+window.onclick = e => {
+  if (e.target === createModal) createModal.style.display = "none";
+  if (e.target === joinModal) joinModal.style.display = "none";
+};
+
+// USER PAGE BUTTON
+document.getElementById("user-btn").onclick = () => window.location.href = "user.html";
+
+renderServers();
 </script>
 </body>
 </html>
