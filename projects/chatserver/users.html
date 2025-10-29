@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>User Page - GurtChat</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.user-container{max-width:400px;margin:50px auto;padding:20px;border-radius:10px;background:#f3f4f6;box-shadow:0 4px 10px rgba(0,0,0,0.1);display:none;}
+.user-container h1{text-align:center;margin-bottom:10px;}
+.user-container p{text-align:center;margin-bottom:20px;}
+.user-container button{width:100%;padding:10px;border:none;border-radius:5px;background:#3b82f6;color:white;cursor:pointer;font-weight:bold;}
+.user-container button:hover{background:#2563eb;}
+</style>
+</head>
+<body>
+<div class="user-container" id="user-container">
+  <h1 id="user-title"></h1>
+  <p id="user-email"></p>
+  <button id="logout-btn">Logout</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+const firebaseConfig = { apiKey:"AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+authDomain:"gurtchat-237b3.firebaseapp.com",
+databaseURL:"https://gurtchat-237b3-default-rtdb.firebaseio.com",
+projectId:"gurtchat-237b3",
+storageBucket:"gurtchat-237b3.firebasestorage.app",
+messagingSenderId:"762205720734",
+appId:"1:762205720734:web:e96c0888b31155380aeb8f" };
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getDatabase(app);
+
+const container=document.getElementById("user-container");
+const title=document.getElementById("user-title");
+const emailP=document.getElementById("user-email");
+
+onAuthStateChanged(auth,async (user)=>{
+  if(!user){
+    localStorage.removeItem("gurtchat_username");
+    window.location.href="index.html";
+    return;
+  }
+
+  container.style.display="block";
+
+  let username=localStorage.getItem("gurtchat_username");
+  if(!username){
+    const snapshot=await get(child(ref(db),`users/${user.uid}/username`));
+    if(snapshot.exists()) username=snapshot.val();
+    localStorage.setItem("gurtchat_username",username);
+  }
+
+  title.textContent=`Logged in as: ${username}`;
+  emailP.textContent=`Email: ${user.email}`;
+
+  document.getElementById("logout-btn").addEventListener("click",async ()=>{
+    await signOut(auth);
+    localStorage.removeItem("gurtchat_username");
+    window.location.href="index.html";
+  });
+});
+</script>
+</body>
+</html>
