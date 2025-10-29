@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GurtChat Admin</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<h1 style="text-align:center;">GurtChat Admin Panel</h1>
+<div id="admin-content"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getDatabase, ref, onChildAdded, remove, get } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+  authDomain: "gurtchat-237b3.firebaseapp.com",
+  databaseURL: "https://gurtchat-237b3-default-rtdb.firebaseio.com",
+  projectId: "gurtchat-237b3",
+  storageBucket: "gurtchat-237b3.firebasestorage.app",
+  messagingSenderId: "762205720734",
+  appId: "1:762205720734:web:e96c0888b31155380aeb8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+const adminDiv = document.getElementById("admin-content");
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
+  const snap = await get(ref(db, `users/${user.uid}`));
+  const userData = snap.val();
+  if (!userData?.isAdmin) return alert("Access denied.");
+
+  ["General", "Random", "Dev"].forEach(channel => {
+    const section = document.createElement("div");
+    section.innerHTML = `<h2>${channel}</h2>`;
+    const list = document.createElement("div");
+    section.appendChild(list);
+    adminDiv.appendChild(section);
+
+    onChildAdded(ref(db, `messages/${channel}`), snapshot => {
+      const msg = snapshot.val();
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "msg-admin";
+      msgDiv.textContent = `${msg.user}: ${msg.text}`;
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.onclick = () => remove(ref(db, `messages/${channel}/${snapshot.key}`));
+      msgDiv.appendChild(delBtn);
+      list.appendChild(msgDiv);
+    });
+  });
+});
+</script>
+</body>
+</html>
