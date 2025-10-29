@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GurtChat</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+#chat-wrapper{display:flex;height:100vh;font-family:sans-serif;}
+#sidebar{width:220px;background:#f3f4f6;padding:10px;display:flex;flex-direction:column;}
+.channel-list{flex:1;overflow-y:auto;margin-bottom:10px;}
+.channel{padding:5px 10px;border-radius:5px;cursor:pointer;margin-bottom:3px;}
+.channel.active{background:#3b82f6;color:white;}
+#chat-area{flex:1;display:flex;flex-direction:column;background:white;}
+#chat-header{padding:10px;border-bottom:1px solid #ddd;font-weight:bold;}
+#messages{flex:1;padding:10px;overflow-y:auto;}
+#chat-input-area{display:flex;border-top:1px solid #ddd;padding:10px;}
+#chat-input{flex:1;padding:12px;border-radius:5px;border:1px solid #ccc;font-size:16px;}
+#send-btn{padding:6px 12px;margin-left:5px;border:none;border-radius:5px;background:#3b82f6;color:white;cursor:pointer;}
+#send-btn:hover{background:#2563eb;}
+.msg-bubble{padding:6px 10px;border-radius:8px;margin-bottom:5px;display:inline-block;}
+.msg-user{background:#3b82f6;color:white;align-self:flex-end;}
+.msg-other{background:#e5e7eb;color:#111;align-self:flex-start;}
+</style>
+</head>
+<body>
+<div id="chat-wrapper">
+  <div id="sidebar">
+    <h2>GurtChat</h2>
+    <div class="channel-list">
+      <div class="channel active" data-channel="general"># general</div>
+      <div class="channel" data-channel="random"># random</div>
+      <div class="channel" data-channel="help"># help</div>
+    </div>
+    <button id="user-btn">User Page</button>
+  </div>
+  <div id="chat-area">
+    <div id="chat-header"># general</div>
+    <div id="messages"></div>
+    <div id="chat-input-area">
+      <input id="chat-input" placeholder="Message #general"/>
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+const firebaseConfig = { apiKey:"AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+authDomain:"gurtchat-237b3.firebaseapp.com",
+databaseURL:"https://gurtchat-237b3-default-rtdb.firebaseio.com",
+projectId:"gurtchat-237b3",
+storageBucket:"gurtchat-237b3.firebasestorage.app",
+messagingSenderId:"762205720734",
+appId:"1:762205720734:web:e96c0888b31155380aeb8f" };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+let username="",currentChannel="general",authInitialized=false;
+
+onAuthStateChanged(auth,(user)=>{
+  if(!authInitialized){
+    authInitialized=true;
+    if(!user){
+      localStorage.removeItem("gurtchat_username");
+      window.location.href="index.html";
+      return;
+    }
+    username=localStorage.getItem("gurtchat_username")||user.email.split("@")[0];
+    initChatUI();
+  }
+});
+
+function initChatUI(){
+  const messagesDiv=document.getElementById("messages");
+  const input=document.getElementById("chat-input");
+
+  const badWords=["badword1","badword2"];
+  function filterMessage(text){badWords.forEach(w=>{const re=new RegExp("\\b"+w+"\\b","gi");text=text.replace(re,"****");});return text;}
+
+  function loadMessages(channel){
+    messagesDiv.innerHTML="";
+    const messagesRef=ref(db,`messages/${channel}`);
+    onChildAdded(messagesRef,(snapshot)=>{
+      const msg=snapshot.val();
+      const bubble=document.createElement("div");
+      bubble.classList.add("msg-bubble",msg.user===username?"msg-user":"msg-other");
+      bubble.textContent=`${msg.user}: ${msg.text}`;
+      messagesDiv.appendChild(bubble);
+      messagesDiv.scrollTop=messagesDiv.scrollHeight;
+    });
+  }
+
+  loadMessages(currentChannel);
+
+  function sendMessage(){
+    const text=filterMessage(input.value.trim());
+    if(!text) return;
+    push(ref(db,`messages/${currentChannel}`),{user:username,text:text,timestamp:Date.now()});
+    input.value="";
+  }
+
+  document.getElementById("send-btn").addEventListener("click",sendMessage);
+  input.addEventListener("keypress",(e)=>{if(e.key==="Enter") sendMessage();});
+
+  document.querySelectorAll(".channel").forEach(el=>{
+    el.addEventListener("click",()=>{
+      document.querySelectorAll(".channel").forEach(c=>c.classList.remove("active"));
+      el.classList.add("active");
+      currentChannel=el.dataset.channel;
+      document.getElementById("chat-header").textContent=`# ${currentChannel}`;
+      input.placeholder=`Message #${currentChannel}`;
+      loadMessages(currentChannel);
+    });
+  });
+
+  document.getElementById("user-btn").addEventListener("click",()=>window.location.href="user.html");
+}
+</script>
+</body>
+</html>
