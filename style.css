@@ -1,0 +1,409 @@
+/* Applies on all pages */
+
+/* Default CSS settings*/
+body {
+    padding: 0px;
+    margin: 0px;
+}
+
+html {
+    scroll-padding-top: 100px;
+}
+
+/* Navigation menu CSS */
+nav {
+    background-color: #5d90db;
+    border-bottom: 2px solid black;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    height: 90px;
+    box-sizing: border-box;
+    z-index: 1000;
+    font-weight: bold;
+}
+
+nav ul {
+    margin: 0px;
+    padding: 9px;
+    list-style-type: none;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+nav ul li {
+    padding: 2px 0px;
+    transition: background-color 0.2s;
+    display: inline-block;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+nav .Navigation_element {
+    text-align: center;
+    background: #4CADFF;
+    transition: 1.0s;
+    padding: 20px 40px;
+}
+
+.Navigation_element:hover {
+    background: #378BCF;
+}
+
+nav ul .Right {
+    opacity: 0;
+    margin-left: auto;
+    padding: 0px 0px;
+    background-image: url(images/favicon.png);
+    width: 70px;
+    height: 70px;
+    display: block;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Footer */
+footer {
+    background-color: #88e1ff;
+    width: 100%;
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: large;
+    position: fixed;
+    bottom: 0;
+    z-index: 11;
+}
+
+/* Notes */
+.note {
+    color: rgb(202, 32, 32);
+}
+
+/* Buttons */
+.content .redirect_button {
+    border-radius: 50px;
+    display: block;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    font-weight: bold;
+}
+
+.content .redirect_button a {
+    text-decoration: none;
+    align-content: center;
+    height: 50px;
+    width: 500px;
+    display: inline-block;
+    color: #1482B6;
+    padding: 13px 40px;
+    border-radius: 50px;
+    background-color: aqua;
+    transition: 0.25s;
+}
+
+.content .redirect_button a:hover {
+    background-color: #0066ff !important;
+    color: white;
+}
+
+.more_info_button {
+    border-radius: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Falling Sky Black';
+    font-weight: bold;
+    width: 100%;
+}
+
+.more_info_button a {
+    text-decoration: none;
+    display: inline-block;
+    color: #1482B6;
+    padding: 13px 40px;
+    border-radius: 50px;
+    background-color: aqua;
+    transition: 0.25s;
+}
+
+.more_info_button a:hover {
+    background-color: #5d90db;
+    color: white;
+}
+
+.discord_button a {
+    background-color: #5865F2 !important; 
+    color: white !important;
+}
+
+.github_button a {
+    background-color: #b7bfb8 !important; 
+   
+}
+/* Header */
+
+header {
+    background-size: cover;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0px;
+    padding-top: 200px;
+    padding-bottom: 200px;
+}
+
+header div {
+    width: 700px;
+    border-radius: 50px;
+    text-align: center;
+    align-self: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 50px;
+    margin: auto;
+}
+
+
+code {
+    background-color: black;
+    border-radius: 12px;
+    color: limegreen;
+    padding: 4px;
+}
+
+
+/* Independent CSS */
+
+
+/* On just the home page */
+body.Home main {
+    margin-top: 90px;
+}
+
+body.Home .features {
+    text-align: center;
+    font-size: 31px;
+    background-color: #B1E5F7;
+    padding-bottom: 60px;
+}
+
+body.Home .features h1 {
+    margin-top: 0px;
+    padding-top: 41px;
+}
+
+body.Home .features ul {
+    list-style-type: none;
+    margin-right: 50px;
+    margin-left: 50px;
+    margin-bottom: 0px;
+    padding-bottom: 20px;
+}
+
+body.Home .features li {
+    padding-bottom: 12px;
+}
+
+body.Home header {
+    background-image: url(images/HeroImage.png);
+}
+
+body.Home header div {
+    background-color: #0A739C;
+    color: #88e1ff;
+}
+
+body.Home .ListImg {
+    background-color: lightgrey;
+    border-radius: 12px 0px 0px 12px;
+    margin-right: 0px;
+}
+
+body.Home .ListImg img {
+    margin: 10px;
+    border-radius: 12px;
+    height: fit-content;
+}
+
+body.Home .ListText {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    background-color: lightgray;
+    font-size: 21px;
+    padding-right: 20px;
+    padding-left: 12px;
+    border-radius: 0px 12px 12px 0px;
+}
+
+body.Home .ListText h2 {
+    font-size: 30px;
+}
+
+/* Just the about page */
+body.About main {
+    display: flex;
+    margin-top: 90px;
+    flex-direction: column;
+}
+
+body.About .content {
+    background-color: #B1E5F7;
+    height: fit-content;
+    position: relative;
+    padding: 12px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 100px;
+    padding-top: 20px;
+    flex-direction: column;
+}
+
+body.About .sidebar {
+    width: 100%;
+    color: lightblue;
+    text-align: center;
+    background-color: grey;
+    border-radius: 12px;
+    margin-top: 20px;
+    margin-bottom: 100px;
+}
+
+body.About .sidebar_content {
+    text-align: left;
+    padding-left: 30px;
+}
+
+body.About .sidebar_content ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: large;
+}
+
+body.About .sidebar_content ul li ul {
+    text-align: left;
+    padding-left: 20px;
+}
+
+body.About .sidebar_content ul li ul a {
+    color: #88e1ff;
+}
+
+body.About .sidebar_top {
+    height: 60px;
+    font-size: 20px;
+}
+
+body.About .sidebar_content a {
+    color: white;
+    text-decoration: none;
+}
+
+body.About .content h1 {
+    font-size: 25px;
+    background-color: rgb(112, 193, 220);
+    padding: 12px;
+}
+
+body.About .content h2 {
+    font-size: 19px;
+    background-color: rgb(112, 220, 200);
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+body.About .About_Image img {
+    width: 241px;
+    height: 241px;
+    border: 1px solid black;
+    border-radius: 12px;
+    margin-left: 0px;
+    margin: 20px;
+    background-color: white;
+}
+
+body.About .About_Image figcaption {
+    flex: 1;
+}
+
+/* Just the projects page */
+body.projects .content {
+    padding: 70px 20px 70px 20px;
+}
+body.projects .content ol {
+    list-style-type: none;
+    padding-left: 0px;
+}
+body.projects .content h1 {
+    font-size: 25px;
+    background-color: rgb(112, 193, 220);
+    padding: 12px;
+}
+
+body.projects .content h2 {
+    font-size: 19px;
+    background-color: rgb(112, 220, 200);
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+body.projects .content h3 {
+    background-color: rgb(28, 176, 122);
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+/* @media */
+@media screen and (min-width: 1000px) {
+    body.Home .ListText {
+        text-align: start;
+    }
+
+    body.Home .ListImg img {
+        height: 200px;
+        float: left;
+    }
+
+    body.About main {
+        flex-direction: row;
+    }
+
+    body.About .About_Image {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    body.About .content {
+        flex: 1;
+        padding-left: 290px;
+    }
+
+    nav ul .Right {
+        opacity: 1;
+    }
+
+
+    .sidebar {
+        position: fixed;
+        z-index: 10;
+        overflow: hidden;
+        height: 80%;
+        top: 90px;
+        width: 250px !important;
+        margin: 20px;
+        display: block;
+    }
+
+    .redirect_button a {
+        width: 300px;
+    }
+}
