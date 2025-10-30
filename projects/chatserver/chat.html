@@ -13,6 +13,7 @@ body{margin:0;font-family:sans-serif;background:#f9fafb;}
 #server-controls button:hover{background:#2563eb;}
 .server-entry{margin-top:5px;}
 .server-header{cursor:pointer;font-weight:bold;padding:5px;background:#e2e8f0;border-radius:4px;display:flex;justify-content:space-between;align-items:center;}
+.server-header span.arrow{margin-left:auto;}
 .channel{padding:3px 15px;cursor:pointer;}
 .channel:hover{background:#dbeafe;}
 .channel.active{background:#3b82f6;color:white;}
@@ -26,7 +27,7 @@ body{margin:0;font-family:sans-serif;background:#f9fafb;}
 .msg-bubble{padding:6px 10px;border-radius:8px;margin-bottom:5px;display:inline-block;}
 .msg-user{background:#3b82f6;color:white;}
 .msg-other{background:#e5e7eb;color:#111;}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:999;}
 .modal-content{background:white;padding:20px;border-radius:8px;width:400px;max-width:90%;}
 .modal-content input, .modal-content textarea{width:100%;margin-bottom:10px;padding:8px;border:1px solid #ccc;border-radius:4px;}
 .modal-content button{padding:8px 12px;border:none;border-radius:4px;background:#3b82f6;color:white;cursor:pointer;}
@@ -43,6 +44,7 @@ body{margin:0;font-family:sans-serif;background:#f9fafb;}
     <div id="server-list"></div>
     <button id="user-btn">User Page</button>
   </div>
+
   <div id="chat-area">
     <div id="chat-header">No server selected</div>
     <div id="messages"></div>
@@ -58,7 +60,7 @@ body{margin:0;font-family:sans-serif;background:#f9fafb;}
   <div class="modal-content">
     <h3>Create Server</h3>
     <input id="server-name" placeholder="Server name"/>
-    <textarea id="firebase-config" placeholder="Paste your Firebase config JSON here"></textarea>
+    <textarea id="firebase-config" placeholder="Paste your Firebase config JSON or JS snippet here"></textarea>
     <input id="server-channels" placeholder="Channels (comma separated)"/>
     <button id="save-server">Save Server</button>
     <p id="join-key" style="font-size:12px;word-break:break-all;"></p>
@@ -77,15 +79,16 @@ body{margin:0;font-family:sans-serif;background:#f9fafb;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
 let servers = JSON.parse(localStorage.getItem("gurtchat_servers") || "{}");
 let currentServer = null;
 let currentChannel = null;
 let currentApp = null;
 let username = localStorage.getItem("gurtchat_username") || "User";
+let userEmail = localStorage.getItem("gurtchat_email") || "unknown";
 
 function saveServers() { localStorage.setItem("gurtchat_servers", JSON.stringify(servers)); }
+
 function renderServers() {
   const list = document.getElementById("server-list");
   list.innerHTML = "";
@@ -95,7 +98,22 @@ function renderServers() {
 
     const header = document.createElement("div");
     header.classList.add("server-header");
-    header.innerHTML = `<span>${name}</span><span>►</span>`;
+    header.innerHTML = `<span>${name}</span><span class="arrow">►</span>`;
+
+    // If user owns this server, show ✎ edit icon
+    if (data.owner === userEmail) {
+      const editBtn = document.createElement("span");
+      editBtn.textContent = "✎";
+      editBtn.style.cursor = "pointer";
+      editBtn.style.marginLeft = "6px";
+      editBtn.title = "Edit server";
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEditServerModal(name, data);
+      });
+      header.insertBefore(editBtn, header.lastChild);
+    }
+
     entry.appendChild(header);
 
     const channelsDiv = document.createElement("div");
@@ -116,7 +134,7 @@ function renderServers() {
     header.addEventListener("click", () => {
       const open = channelsDiv.style.display === "block";
       channelsDiv.style.display = open ? "none" : "block";
-      header.querySelector("span:last-child").textContent = open ? "►" : "▼";
+      header.querySelector(".arrow").textContent = open ? "►" : "▼";
     });
 
     list.appendChild(entry);
@@ -125,21 +143,16 @@ function renderServers() {
 
 function connectToServer(name, configJSON, channel) {
   try {
-    // Clean input (handles pasted JS config)
     let configStr = configJSON.trim()
-      .replace(/^const\s+\w+\s*=\s*/, "")   // remove 'const firebaseConfig ='
-      .replace(/^var\s+\w+\s*=\s*/, "")     // remove 'var something ='
-      .replace(/^let\s+\w+\s*=\s*/, "")     // remove 'let something ='
-      .replace(/;$/, "")                    // remove trailing semicolon
-      .replace(/(\w+):/g, '"$1":');         // ensure property keys are quoted
+      .replace(/^const\s+\w+\s*=\s*/, "")
+      .replace(/^var\s+\w+\s*=\s*/, "")
+      .replace(/^let\s+\w+\s*=\s*/, "")
+      .replace(/;$/, "")
+      .replace(/(\w+):/g, '"$1":');
 
-    // Try parsing JSON safely
     const config = JSON.parse(configStr);
-
-    // Initialize Firebase app (unique per server)
     const app = initializeApp(config, name);
     const db = getDatabase(app);
-
     currentApp = app;
     currentServer = name;
     currentChannel = channel;
@@ -172,7 +185,6 @@ function connectToServer(name, configJSON, channel) {
   }
 }
 
-
 // CREATE SERVER
 const createModal = document.getElementById("create-server-modal");
 document.getElementById("create-server-btn").onclick = () => createModal.style.display = "flex";
@@ -181,7 +193,7 @@ document.getElementById("save-server").onclick = () => {
   const config = document.getElementById("firebase-config").value.trim();
   const chans = document.getElementById("server-channels").value.split(",").map(c => c.trim()).filter(c => c);
   if (!name || !config || chans.length === 0) return alert("Fill all fields");
-  servers[name] = { config, channels: chans };
+  servers[name] = { config, channels: chans, owner: userEmail };
   saveServers();
   renderServers();
   const joinKey = btoa(`${name}|${config}`);
@@ -197,7 +209,7 @@ document.getElementById("join-key-submit").onclick = () => {
   try {
     const decoded = atob(key);
     const [name, config] = decoded.split("|");
-    servers[name] = { config, channels: ["general"] };
+    servers[name] = { config, channels: ["general"], owner: "external" };
     saveServers();
     renderServers();
     joinModal.style.display = "none";
@@ -206,13 +218,39 @@ document.getElementById("join-key-submit").onclick = () => {
   }
 };
 
-// close modals on outside click
+// EDIT SERVER (owner only)
+function openEditServerModal(name, data) {
+  const modal = document.createElement("div");
+  modal.classList.add("modal");
+  modal.style.display = "flex";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>Edit Server</h3>
+      <input id="edit-name" value="${name}" />
+      <input id="edit-channels" value="${data.channels.join(", ")}" />
+      <button id="edit-save">Save</button>
+      <button id="edit-cancel">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector("#edit-save").onclick = () => {
+    const newName = modal.querySelector("#edit-name").value.trim();
+    const newChannels = modal.querySelector("#edit-channels").value.split(",").map(c => c.trim()).filter(c => c);
+    delete servers[name];
+    servers[newName] = { ...data, channels: newChannels };
+    saveServers();
+    renderServers();
+    modal.remove();
+  };
+  modal.querySelector("#edit-cancel").onclick = () => modal.remove();
+}
+
 window.onclick = e => {
   if (e.target === createModal) createModal.style.display = "none";
   if (e.target === joinModal) joinModal.style.display = "none";
 };
 
-// USER PAGE BUTTON
 document.getElementById("user-btn").onclick = () => window.location.href = "user.html";
 
 renderServers();
