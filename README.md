@@ -1,1 +1,1 @@
-[website](https://www/mckayl22a.github.io)
+[website](https://mckayl22a.github.io)
