@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ladder
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js
+    envVars:
+      - key: RULESET
+        value: projects/ladder_io/ruleset.yaml
+      - key: PORT
+        generateValue: false
+      - key: USER_AGENT
+        value: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+      - key: X_FORWARDED_FOR
+        value: "66.249.66.1"
