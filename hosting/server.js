@@ -1,26 +1,9 @@
 const http = require('http');
-const fs = require('fs');
-const path = require('path');
+require('fs');
+require('path');
 const { RuleSet } = require('../projects/ladder_io/ruleset');
 
 const PORT = process.env.PORT || 8080;
-const ROOT = path.join(__dirname, '..');
-
-const MIME_TYPES = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.json': 'application/json',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-};
-
-let ruleSet = new RuleSet();
 
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 const DEFAULT_FORWARDED_FOR = '66.249.66.1';
@@ -28,11 +11,7 @@ const DEFAULT_FORWARDED_FOR = '66.249.66.1';
 const userAgent = process.env.USER_AGENT || DEFAULT_USER_AGENT;
 const forwardedFor = process.env.X_FORWARDED_FOR || DEFAULT_FORWARDED_FOR;
 
-const SERVICES = {
-  ascend: path.join(ROOT, 'projects', 'ladder_io'),
-  chatserver: path.join(ROOT, 'projects', 'chatserver'),
-  sandboxels: path.join(ROOT, 'projects', 'sandboxels_mods'),
-};
+let ruleSet = new RuleSet();
 
 function getHeader(req, name) {
   const lower = name.toLowerCase();
@@ -47,17 +26,9 @@ function sendText(res, code, contentType, body) {
   res.end(body);
 }
 
-function sendFile(res, filePath) {
-  const ext = path.extname(filePath);
-  const mime = MIME_TYPES[ext] || 'application/octet-stream';
-  try {
-    const data = fs.readFileSync(filePath);
-    res.writeHead(200, { 'Content-Type': mime });
-    res.end(data);
-  } catch {
-    res.writeHead(404);
-    res.end();
-  }
+function sendJson(res, code, data) {
+  res.writeHead(code, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data));
 }
 
 function extractUrl(rawPath, referer) {
@@ -122,11 +93,9 @@ function applyRules(body, rule) {
       const tagMatch = injection.position.match(/^([a-zA-Z][a-zA-Z0-9]*)$/);
       if (tagMatch) {
         const tag = tagMatch[1];
-        const openTag = '<' + tag;
         const closeTag = '</' + tag + '>';
-        const openIdx = body.indexOf(openTag);
         const closeIdx = body.indexOf(closeTag);
-        if (openIdx !== -1 && closeIdx !== -1) {
+        if (closeIdx !== -1) {
           let insert = '';
           if (injection.replace) insert = injection.replace;
           else { if (injection.prepend) insert += injection.prepend; if (injection.append) insert += injection.append; }
@@ -228,56 +197,43 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsed.pathname;
   const queries = parsed.query;
 
-  if (pathname === '/favicon.ico') {
-    const faviconPaths = Object.values(SERVICES).map(dir => path.join(dir, 'favicon.ico'));
-    for (const fp of faviconPaths) {
-      if (fs.existsSync(fp)) return sendFile(res, fp);
-    }
-    res.writeHead(404);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
     return res.end();
   }
 
-  for (const [name, dir] of Object.entries(SERVICES)) {
-    const prefix = '/' + name;
-    if (pathname === prefix || pathname === prefix + '/') {
-      const indexPath = path.join(dir, 'index.html');
-      if (fs.existsSync(indexPath)) return sendFile(res, indexPath);
-    }
-    if (pathname.startsWith(prefix + '/')) {
-      const relativePath = pathname.slice(prefix.length + 1);
-      const filePath = path.join(dir, relativePath);
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-        return sendFile(res, filePath);
-      }
-    }
+  if (pathname === '/health') {
+    return sendJson(res, 200, { status: 'ok', rules: ruleSet.count(), domains: ruleSet.domainCount() });
   }
 
-  if (pathname.startsWith('/ascend/')) {
-    const rawPath = pathname.slice(8);
+  if (pathname.startsWith('/ascend/proxy/')) {
+    const rawPath = pathname.slice(13);
     try {
       const result = await fetchSite(rawPath, queries, req);
-      if (rawPath && !rawPath.startsWith('/')) {
-        res.writeHead(200, { 'Content-Type': result.contentType || 'text/html', 'Content-Security-Policy': result.csp || '' });
-        return res.end(result.body);
-      }
+      return sendText(res, 200, result.contentType || 'text/html', result.body);
     } catch (err) {
       console.error('ERROR:', err.message);
       return sendText(res, 500, 'text/plain', err.message);
     }
   }
 
-  if (pathname === '/' || pathname === '') {
-    return sendText(res, 200, 'text/html', `<!DOCTYPE html>
-<html lang=""><head><meta charset="utf-8"><title>Services</title>
-<style>body{font-family:system-ui,sans-serif;background:#f5f5f5;color:#333;display:flex;justify-content:center;padding-top:4rem}
-.card{background:#fff;padding:2rem 3rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-h1{margin-bottom:1rem}a{color:#e94560;text-decoration:none}a:hover{text-decoration:underline}
-ul{list-style:none;padding:0}li{margin:.5rem 0;font-size:1.1rem}</style></head>
-<body><div class="card"><h1>Services</h1><ul>
-<li><a href="/ascend/">Ascend</a> — Paywall proxy</li>
-<li><a href="/chatserver/">Chat Server</a></li>
-<li><a href="/sandboxels/">Sandboxels Mods</a></li>
-</ul></div></body></html>`);
+  if (pathname.startsWith('/ascend/api/')) {
+    const rawPath = pathname.slice(11);
+    try {
+      const result = await fetchSite(rawPath, queries, req);
+      return sendJson(res, 200, { version: '1.0.0', body: result.body, request: { headers: result.requestHeaders }, response: { headers: result.responseHeaders } });
+    } catch (err) {
+      console.error('ERROR:', err.message);
+      return sendText(res, 500, 'text/plain', err.message);
+    }
+  }
+
+  if (pathname === '/ascend/ruleset') {
+    return sendText(res, 200, 'text/yaml', ruleSet.toYaml());
   }
 
   res.writeHead(404);
@@ -295,7 +251,7 @@ async function startServer() {
   }
 
   server.listen(PORT, () => {
-    console.log('Hosting server running at http://localhost:' + PORT);
+    console.log('Ascend backend running at http://localhost:' + PORT);
   });
 }
 
