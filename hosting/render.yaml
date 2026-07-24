@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: ladder
+    name: website
     runtime: node
     plan: free
     buildCommand: ""
-    startCommand: node server.js
+    startCommand: node hosting/server.js
     envVars:
       - key: RULESET
         value: projects/ladder_io/ruleset.yaml
