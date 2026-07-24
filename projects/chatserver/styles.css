@@ -125,30 +125,6 @@ a:hover {
   color: #0f172a;
 }
 
-.channel-list {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.channel {
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #475569;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
-  transition: all 0.2s;
-}
-
-.channel:hover {
-  background: #e2e8f0;
-}
-
-.channel.active {
-  background: #3b82f6;
-  color: white;
-}
-
 /* Main Chat Area */
 #chat-area {
   flex: 1;
@@ -173,26 +149,6 @@ a:hover {
   flex-direction: column;
   gap: 0.5rem;
   background: #f9fafb;
-}
-
-.msg-bubble {
-  max-width: 70%;
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  word-wrap: break-word;
-  animation: fadeIn 0.3s ease;
-}
-
-.msg-user {
-  background: #3b82f6;
-  color: white;
-  align-self: flex-end;
-}
-
-.msg-other {
-  background: #e5e7eb;
-  color: #111;
-  align-self: flex-start;
 }
 
 /* Input Area */
@@ -240,8 +196,7 @@ a:hover {
 .user-container {
   max-width: 500px;
   background: white;
-  margin: auto;
-  margin-top: 10vh;
+  margin: 10vh auto auto;
   padding: 2rem;
   border-radius: 16px;
   text-align: center;

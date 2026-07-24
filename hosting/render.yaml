@@ -1,15 +1,13 @@
 services:
   - type: web
     name: website
-    runtime: node
+    runtime: python
     plan: free
-    buildCommand: ""
-    startCommand: node hosting/server.js
+    buildCommand: pip install -r hosting/requirements.txt
+    startCommand: cd hosting && gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: RULESET
-        value: ../projects/ladder_io/ruleset.yaml
-      - key: PORT
-        generateValue: false
+        value: projects/ladder_io/ruleset.yaml
       - key: USER_AGENT
         value: "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
       - key: X_FORWARDED_FOR
