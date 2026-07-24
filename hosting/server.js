@@ -211,7 +211,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname.startsWith('/ascend/proxy/')) {
-    const rawPath = pathname.slice(13);
+    const rawPath = pathname.slice(14);
     try {
       const result = await fetchSite(rawPath, queries, req);
       return sendText(res, 200, result.contentType || 'text/html', result.body);
@@ -222,7 +222,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (pathname.startsWith('/ascend/api/')) {
-    const rawPath = pathname.slice(11);
+    const rawPath = pathname.slice(12);
     try {
       const result = await fetchSite(rawPath, queries, req);
       return sendJson(res, 200, { version: '1.0.0', body: result.body, request: { headers: result.requestHeaders }, response: { headers: result.responseHeaders } });
