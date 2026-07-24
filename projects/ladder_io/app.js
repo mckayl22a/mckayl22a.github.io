@@ -6,6 +6,6 @@ document.getElementById('inputForm').addEventListener('submit', function (e) {
     if (url.indexOf('http') === -1) {
         url = 'https://' + url;
     }
-    window.open(PROXY_BACKEND + '/ascend/proxy/' + url, '_blank');
+    window.location.href = PROXY_BACKEND + '/ascend/proxy/' + url;
     return false;
 });

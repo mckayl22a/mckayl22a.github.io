@@ -7,7 +7,7 @@ services:
     startCommand: node hosting/server.js
     envVars:
       - key: RULESET
-        value: projects/ladder_io/ruleset.yaml
+        value: ../projects/ladder_io/ruleset.yaml
       - key: PORT
         generateValue: false
       - key: USER_AGENT
